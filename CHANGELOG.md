@@ -1,3 +1,10 @@
+## [3.8.2](https://github.com/fabioluciano/tmux-powerkit/compare/v3.8.1...v3.8.2) (2025-12-15)
+
+
+### Bug Fixes
+
+* update keybindings to use Alt modifier and improve toast notifications ([#119](https://github.com/fabioluciano/tmux-powerkit/issues/119)) ([f7b598f](https://github.com/fabioluciano/tmux-powerkit/commit/f7b598f2a6e494a91f8a3d08f8ab34ab10e6d408))
+
 ## [3.8.1](https://github.com/fabioluciano/tmux-powerkit/compare/v3.8.0...v3.8.1) (2025-12-15)
 
 

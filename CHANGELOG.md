@@ -1,3 +1,10 @@
+# [3.9.0](https://github.com/fabioluciano/tmux-powerkit/compare/v3.8.3...v3.9.0) (2025-12-16)
+
+
+### Features
+
+* enhance session colors and update keybindings for improved usability ([#125](https://github.com/fabioluciano/tmux-powerkit/issues/125)) ([e78ec89](https://github.com/fabioluciano/tmux-powerkit/commit/e78ec89d9082a47902b7fa03cee1a8cf750ec1e3))
+
 ## [3.8.3](https://github.com/fabioluciano/tmux-powerkit/compare/v3.8.2...v3.8.3) (2025-12-15)
 
 

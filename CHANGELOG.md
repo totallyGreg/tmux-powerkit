@@ -1,3 +1,10 @@
+## [4.0.1](https://github.com/fabioluciano/tmux-powerkit/compare/v4.0.0...v4.0.1) (2025-12-17)
+
+
+### Bug Fixes
+
+* adding a missing color ([#130](https://github.com/fabioluciano/tmux-powerkit/issues/130)) ([2789c08](https://github.com/fabioluciano/tmux-powerkit/commit/2789c08b06e2a710be793213c62ceebdd8fca84b))
+
 # [4.0.0](https://github.com/fabioluciano/tmux-powerkit/compare/v3.9.2...v4.0.0) (2025-12-17)
 
 

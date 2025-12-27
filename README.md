@@ -5,7 +5,6 @@
 [![Version](https://img.shields.io/github/v/release/fabioluciano/tmux-powerkit?style=flat-square)](https://github.com/fabioluciano/tmux-powerkit/releases)
 [![License](https://img.shields.io/github/license/fabioluciano/tmux-powerkit?style=flat-square)](LICENSE)
 [![CI](https://img.shields.io/github/actions/workflow/status/fabioluciano/tmux-powerkit/plugin-tests.yml?branch=main&style=flat-square&label=tests)](https://github.com/fabioluciano/tmux-powerkit/actions)
-[![ShellCheck](https://img.shields.io/github/actions/workflow/status/fabioluciano/tmux-powerkit/shellcheck.yml?branch=main&style=flat-square&label=shellcheck)](https://github.com/fabioluciano/tmux-powerkit/actions)
 
 ---
 
@@ -49,18 +48,18 @@ set -g @powerkit_separator_style "rounded"
 
 ## Documentation
 
-Full documentation is available in the [Wiki](wiki/Home.md).
+Full documentation is available in the [Wiki](../../wiki).
 
 | Section | Description |
 |---------|-------------|
-| [Installation](wiki/Installation.md) | Detailed setup guide |
-| [Quick Start](wiki/Quick-Start.md) | Get started in 5 minutes |
-| [Configuration](wiki/Configuration.md) | All configuration options |
+| [Installation](../../wiki/Installation) | Detailed setup guide |
+| [Quick Start](../../wiki/Quick-Start) | Get started in 5 minutes |
+| [Configuration](../../wiki/Configuration) | All configuration options |
 | [Options Reference](assets/powerkit-options.conf) | Complete tmux.conf template with all options |
-| [Plugins](wiki/Home.md#available-plugins) | 42 available plugins |
-| [Themes](wiki/Themes.md) | 13 themes with 27 variants |
-| [Developing Plugins](wiki/DevelopingPlugins.md) | Create your own plugins |
-| [Developing Themes](wiki/DevelopingThemes.md) | Create custom themes |
+| [Plugins](../../wiki/Home#plugins-42-available) | 42 available plugins |
+| [Themes](../../wiki/Themes) | 13 themes with 27 variants |
+| [Developing Plugins](../../wiki/DevelopingPlugins) | Create your own plugins |
+| [Developing Themes](../../wiki/DevelopingThemes) | Create custom themes |
 
 ## Available Plugins
 
@@ -124,7 +123,7 @@ Full documentation is available in the [Wiki](wiki/Home.md).
 | **Kiribyte** | Dark, Light |
 | **Pastel** | Dark, Light |
 
-See [Themes Documentation](wiki/Themes.md) for previews and configuration.
+See [Themes Documentation](../../wiki/Themes) for previews and configuration.
 
 ## Architecture
 
@@ -143,7 +142,7 @@ Plugin          Renderer         Theme
 - **Renderer** handles all UI decisions (colors, icons, formatting)
 - **Themes** define color palettes only
 
-Learn more in the [Architecture Documentation](wiki/Architecture.md).
+Learn more in the [Architecture Documentation](../../wiki/Architecture).
 
 ## Requirements
 
@@ -155,7 +154,7 @@ Some plugins require additional dependencies. See individual plugin documentatio
 
 ## Contributing
 
-Contributions are welcome! Please read the [Development Guide](wiki/DevelopingPlugins.md) before submitting PRs.
+Contributions are welcome! Please read the [Development Guide](../../wiki/DevelopingPlugins) before submitting PRs.
 
 1. Fork the repository
 2. Create your feature branch (`git checkout -b feature/amazing-feature`)

@@ -1,3 +1,10 @@
+# [5.2.0](https://github.com/fabioluciano/tmux-powerkit/compare/v5.1.0...v5.2.0) (2025-12-29)
+
+
+### Features
+
+* implement lazy loading for plugin data with stale-while-revalid… ([#146](https://github.com/fabioluciano/tmux-powerkit/issues/146)) ([1d628bb](https://github.com/fabioluciano/tmux-powerkit/commit/1d628bbaf2dfcbf3aa83882bbc2c70fd0bd44857))
+
 # [5.1.0](https://github.com/fabioluciano/tmux-powerkit/compare/v5.0.2...v5.1.0) (2025-12-28)
 
 

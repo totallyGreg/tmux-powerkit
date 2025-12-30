@@ -46,18 +46,19 @@ jobs:
 
       - name: Install Semantic Release
         run: |
-          npm install -g semantic-release@23 \
+          npm install -g semantic-release@25 \
             @semantic-release/changelog@6 \
             @semantic-release/git@10 \
-            @semantic-release/github@10 \
-            @semantic-release/exec@6
+            @semantic-release/github@12 \
+            @semantic-release/exec@7 \
+            conventional-changelog-conventionalcommits@9
 
       - name: Semantic Release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           BUILD_SUFFIX: ${{ matrix.suffix }}
           BUILD_ARCH: ${{ matrix.arch }}
-        run: semantic-release --dry-run
+        run: semantic-release
 
       - name: Build Summary
         if: always()

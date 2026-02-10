@@ -2,6 +2,12 @@
 
 All notable changes to tmux-powerkit will be documented in this file.
 
+## [5.18.2](https://github.com/fabioluciano/tmux-powerkit/compare/v5.18.1...v5.18.2) (2026-02-10)
+
+### Bug Fixes
+
+* **windows:** improve window format padding and color contrast for readability ([#186](https://github.com/fabioluciano/tmux-powerkit/issues/186)) ([9c8b6d2](https://github.com/fabioluciano/tmux-powerkit/commit/9c8b6d21aa15247cfd210c8647043ebf7b132d13))
+
 ## [5.18.1](https://github.com/fabioluciano/tmux-powerkit/compare/v5.18.0...v5.18.1) (2026-02-10)
 
 ### Bug Fixes

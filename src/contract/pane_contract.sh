@@ -253,6 +253,24 @@ _pane_flash_update_color() {
     log_debug "pane" "Pane flash color updated: $resolved_color"
 }
 
+# Internal: Get color from a specific theme variant
+# Usage: _get_theme_color "solarized/dark" "statusbar-bg"
+_get_theme_color() {
+    local theme_path="$1"
+    local color_name="$2"
+    local theme_file="${POWERKIT_ROOT}/src/themes/${theme_path}.sh"
+
+    [[ ! -f "$theme_file" ]] && return 1
+
+    # Extract color value from theme file using grep
+    # Pattern: [color_name]="#RRGGBB"
+    local color_value
+    color_value=$(grep -E "^\s*\[${color_name}\]=" "$theme_file" 2>/dev/null | \
+                  sed -E 's/^[^"]*"([^"]+)".*$/\1/')
+
+    [[ -n "$color_value" ]] && printf '%s' "$color_value"
+}
+
 # Internal: Resolve color from theme or return as-is
 # Usage: _pane_resolve_color "info-base"
 _pane_resolve_color() {
@@ -265,7 +283,39 @@ _pane_resolve_color() {
     # If it's already a hex color, return as-is
     [[ "$color" =~ ^#[0-9A-Fa-f]{6}$ ]] && { printf '%s' "$color"; return; }
 
-    # Try to resolve from theme
+    # Auto-generate format string for theme colors with light/dark variants
+    local theme variant
+    theme=$(get_tmux_option "@powerkit_theme" "")
+    variant=$(get_tmux_option "@powerkit_theme_variant" "")
+
+    if [[ -n "$theme" ]]; then
+        # Check if theme has both light and dark variants
+        local light_file="${POWERKIT_ROOT}/src/themes/${theme}/light.sh"
+        local dark_file="${POWERKIT_ROOT}/src/themes/${theme}/dark.sh"
+
+        if [[ -f "$light_file" && -f "$dark_file" ]]; then
+            # Get color from both variants
+            local dark_color light_color
+            dark_color=$(_get_theme_color "${theme}/dark" "$color")
+            light_color=$(_get_theme_color "${theme}/light" "$color")
+
+            # If both colors exist and are different, generate dynamic format string
+            if [[ -n "$dark_color" && -n "$light_color" ]]; then
+                if [[ "$dark_color" != "$light_color" ]]; then
+                    # Auto-generate format string: if @dark_appearance is 1, use dark, else light
+                    printf '#{?#{@dark_appearance},%s,%s}' "$dark_color" "$light_color"
+                    log_debug "pane" "Auto-generated dynamic color for '$color': dark=$dark_color, light=$light_color"
+                    return
+                else
+                    # Colors are the same in both variants, just return the static color
+                    printf '%s' "$dark_color"
+                    return
+                fi
+            fi
+        fi
+    fi
+
+    # Fallback: Try to resolve from current theme variant
     if declare -F resolve_color &>/dev/null; then
         local resolved
         resolved=$(resolve_color "$color" 2>/dev/null)

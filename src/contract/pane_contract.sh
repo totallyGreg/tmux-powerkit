@@ -135,6 +135,11 @@ pane_flash_trigger() {
     local resolved_color
     resolved_color=$(_pane_resolve_color "$color")
 
+    # If color contains tmux format strings, evaluate at trigger time
+    if [[ "$resolved_color" == *'#{'* ]]; then
+        resolved_color=$(tmux display-message -p "$resolved_color" 2>/dev/null)
+    fi
+
     # Calculate delay in seconds
     local delay_s
     delay_s=$(echo "scale=3; $duration_ms / 1000" | bc 2>/dev/null || echo "0.1")
@@ -173,6 +178,14 @@ pane_flash_disable() {
 
 # Setup the flash hook (called during bootstrap)
 # Usage: pane_flash_setup
+#
+# Stores resolved color and delay in tmux options so the hook can read
+# them at trigger time. This allows theme switches (e.g., @dark_appearance
+# toggle) to take effect without re-registering the hook.
+#
+# For tmux format strings (e.g., "#{?#{@dark_appearance},#073642,#eee8d5}"),
+# the color is stored unresolved and evaluated via `tmux display-message -p`
+# each time the hook fires.
 pane_flash_setup() {
     pane_flash_is_enabled || return 0
 
@@ -180,7 +193,7 @@ pane_flash_setup() {
     color=$(get_tmux_option "@powerkit_pane_flash_color" "${POWERKIT_DEFAULT_PANE_FLASH_COLOR:-info-base}")
     duration_ms=$(get_tmux_option "@powerkit_pane_flash_duration" "${POWERKIT_DEFAULT_PANE_FLASH_DURATION:-100}")
 
-    # Resolve color
+    # Resolve color (format strings pass through unresolved)
     local resolved_color
     resolved_color=$(_pane_resolve_color "$color")
 
@@ -188,10 +201,21 @@ pane_flash_setup() {
     local delay_s
     delay_s=$(echo "scale=3; $duration_ms / 1000" | bc 2>/dev/null || echo "0.1")
 
-    # Build the hook command
-    # The hook sets the background, then resets it after the delay
+    # Store resolved color and delay in tmux options for trigger-time lookup
+    set_tmux_option "@_powerkit_pane_flash_resolved" "$resolved_color"
+    set_tmux_option "@_powerkit_pane_flash_delay" "$delay_s"
+
+    # Build the hook command that reads options at trigger time
+    # If the resolved color contains #{, evaluate it via display-message -p
     local hook_cmd
-    hook_cmd="run-shell 'tmux set -w window-active-style \"bg=$resolved_color\"; sleep $delay_s; tmux set -w window-active-style \"\"'"
+    hook_cmd="run-shell '"
+    hook_cmd+='color=$(tmux show-option -gqv @_powerkit_pane_flash_resolved); '
+    hook_cmd+='delay=$(tmux show-option -gqv @_powerkit_pane_flash_delay); '
+    hook_cmd+='case "$color" in *\#\{*) color=$(tmux display-message -p "$color");; esac; '
+    hook_cmd+='tmux set -w window-active-style "bg=$color"; '
+    hook_cmd+='sleep "$delay"; '
+    hook_cmd+='tmux set -w window-active-style ""'
+    hook_cmd+="'"
 
     # Register the hook
     tmux set-hook -g after-select-pane "$hook_cmd" 2>/dev/null || {
@@ -207,15 +231,36 @@ pane_flash_setup() {
 # Usage: _pane_flash_teardown
 _pane_flash_teardown() {
     tmux set-hook -gu after-select-pane 2>/dev/null || true
+    # Clean up internal options
+    tmux set-option -gu "@_powerkit_pane_flash_resolved" 2>/dev/null || true
+    tmux set-option -gu "@_powerkit_pane_flash_delay" 2>/dev/null || true
     # Reset any lingering style
     tmux set -w window-active-style '' 2>/dev/null || true
     log_debug "pane" "Pane flash hook removed"
+}
+
+# Internal: Re-resolve the flash color and update the stored option
+# Useful for theme switches without re-registering the hook
+# Usage: _pane_flash_update_color
+_pane_flash_update_color() {
+    local color
+    color=$(get_tmux_option "@powerkit_pane_flash_color" "${POWERKIT_DEFAULT_PANE_FLASH_COLOR:-info-base}")
+
+    local resolved_color
+    resolved_color=$(_pane_resolve_color "$color")
+
+    set_tmux_option "@_powerkit_pane_flash_resolved" "$resolved_color"
+    log_debug "pane" "Pane flash color updated: $resolved_color"
 }
 
 # Internal: Resolve color from theme or return as-is
 # Usage: _pane_resolve_color "info-base"
 _pane_resolve_color() {
     local color="$1"
+
+    # If it contains tmux format strings (e.g., #{?#{@dark_appearance},...}),
+    # pass through unresolved for trigger-time evaluation
+    [[ "$color" == *'#{'* ]] && { printf '%s' "$color"; return; }
 
     # If it's already a hex color, return as-is
     [[ "$color" =~ ^#[0-9A-Fa-f]{6}$ ]] && { printf '%s' "$color"; return; }

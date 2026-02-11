@@ -253,6 +253,51 @@ is_fanless_mac() {
 }
 
 # =============================================================================
+# macOS Appearance Detection
+# =============================================================================
+
+# Cached value for macOS appearance
+declare -g _CACHED_MAC_APPEARANCE=""
+declare -g _CACHED_MAC_APPEARANCE_TIME=0
+
+# Get current macOS appearance mode
+# Usage: get_macos_appearance
+# Returns: "1" for Dark mode, "0" for Light mode
+# Note: Returns "0" (light) on non-macOS systems or if detection fails
+get_macos_appearance() {
+    # Return cached value if recent (cache for 5 seconds)
+    local now
+    now=$(date +%s 2>/dev/null || echo "0")
+    local cache_age=$((now - _CACHED_MAC_APPEARANCE_TIME))
+
+    if [[ -n "$_CACHED_MAC_APPEARANCE" ]] && (( cache_age < 5 )); then
+        printf '%s' "$_CACHED_MAC_APPEARANCE"
+        return
+    fi
+
+    # Default to light mode on non-macOS systems
+    if ! is_macos; then
+        _CACHED_MAC_APPEARANCE="0"
+        _CACHED_MAC_APPEARANCE_TIME="$now"
+        printf '%s' "$_CACHED_MAC_APPEARANCE"
+        return
+    fi
+
+    # Read macOS system appearance setting
+    local appearance
+    appearance=$(defaults read -g AppleInterfaceStyle 2>/dev/null)
+
+    if [[ "$appearance" == "Dark" ]]; then
+        _CACHED_MAC_APPEARANCE="1"
+    else
+        _CACHED_MAC_APPEARANCE="0"
+    fi
+
+    _CACHED_MAC_APPEARANCE_TIME="$now"
+    printf '%s' "$_CACHED_MAC_APPEARANCE"
+}
+
+# =============================================================================
 # Environment Detection
 # =============================================================================
 

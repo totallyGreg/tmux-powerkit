@@ -67,6 +67,7 @@
 #     pane_flash_is_enabled()       - Check if flash is enabled
 #     pane_flash_trigger()          - Manually trigger flash effect
 #     pane_flash_setup()            - Setup flash hook (called by bootstrap)
+#     sync_pane_flash_appearance()  - Sync @dark_appearance with system (macOS)
 #
 #   Pane State:
 #     pane_get_state()              - Get current pane state
@@ -302,7 +303,8 @@ _pane_resolve_color() {
             # If both colors exist and are different, generate dynamic format string
             if [[ -n "$dark_color" && -n "$light_color" ]]; then
                 if [[ "$dark_color" != "$light_color" ]]; then
-                    # Auto-generate format string: if @dark_appearance is 1, use dark, else light
+                    # Auto-generate format string: if @dark_appearance is truthy, use first color
+                    # Testing needed to determine correct mapping
                     printf '#{?#{@dark_appearance},%s,%s}' "$dark_color" "$light_color"
                     log_debug "pane" "Auto-generated dynamic color for '$color': dark=$dark_color, light=$light_color"
                     return
@@ -324,6 +326,57 @@ _pane_resolve_color() {
 
     # Fallback: return as-is (might be a tmux color name)
     printf '%s' "$color"
+}
+
+# Sync @dark_appearance with current system appearance
+# Usage: sync_pane_flash_appearance
+#
+# This function detects the current macOS system appearance (Dark or Light)
+# and updates the tmux @dark_appearance option if it doesn't match. This is
+# useful for terminals like Ghostty that automatically switch themes based on
+# system appearance but don't have hooks to notify tmux.
+#
+# The function is safe to call repeatedly - it only updates if there's a mismatch.
+sync_pane_flash_appearance() {
+    # Get current system appearance (1=dark, 0=light)
+    local system_appearance
+    if declare -F get_macos_appearance &>/dev/null; then
+        system_appearance=$(get_macos_appearance)
+    else
+        # Fallback: try to detect directly if platform.sh not loaded
+        if is_macos; then
+            local appearance
+            appearance=$(defaults read -g AppleInterfaceStyle 2>/dev/null)
+            if [[ "$appearance" == "Dark" ]]; then
+                system_appearance="1"
+            else
+                system_appearance="0"
+            fi
+        else
+            system_appearance="0"  # Default to light on non-macOS
+        fi
+    fi
+
+    # Get current tmux setting
+    local current_setting
+    current_setting=$(get_tmux_option "@dark_appearance" "0")
+
+    # Only update if there's a mismatch
+    if [[ "$system_appearance" != "$current_setting" ]]; then
+        set_tmux_option "@dark_appearance" "$system_appearance"
+
+        local mode_name
+        [[ "$system_appearance" == "1" ]] && mode_name="dark" || mode_name="light"
+
+        log_info "pane" "Synced @dark_appearance: $current_setting → $system_appearance ($mode_name mode)"
+
+        # Update the resolved flash color if the function exists
+        if declare -F _pane_flash_update_color &>/dev/null; then
+            _pane_flash_update_color
+        fi
+    else
+        log_debug "pane" "@dark_appearance already in sync (system=$system_appearance)"
+    fi
 }
 
 # =============================================================================

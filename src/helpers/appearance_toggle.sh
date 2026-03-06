@@ -27,13 +27,19 @@ helper_get_actions() {
 # Internal Helpers
 # =============================================================================
 
-# Read actual OS appearance: 1=dark, 0=light.
-# defaults(1) returns "Dark" when dark; exits non-zero (key missing) when light
-# or when macOS is set to Auto. Auto and explicit Light are indistinguishable.
-_os_dark_value() {
-    local style
-    style=$(defaults read -g AppleInterfaceStyle 2>/dev/null) || style=""
-    [[ "$style" == "Dark" ]] && printf '1' || printf '0'
+# Read the actual macOS three-state: auto | dark | light
+_macos_mode() {
+    local auto_switch dark_style
+    auto_switch=$(defaults read -g AppleInterfaceStyleSwitchesAutomatically 2>/dev/null) || auto_switch=""
+    dark_style=$(defaults read -g AppleInterfaceStyle 2>/dev/null) || dark_style=""
+
+    if [[ "$auto_switch" == "1" ]]; then
+        printf 'auto'
+    elif [[ "$dark_style" == "Dark" ]]; then
+        printf 'dark'
+    else
+        printf 'light'
+    fi
 }
 
 # Dispatch dark_val (0|1) to @dark_appearance and signal all zsh processes.
@@ -47,8 +53,7 @@ _dispatch() {
     tmux set-option -gq @dark_appearance "$dark_val" 2>/dev/null || true
 
     if [[ -x "$dispatch_bin" ]]; then
-        "$dispatch_bin" tmux   "$dark_val" 2>/dev/null || true
-        "$dispatch_bin" cache  "$dark_val" 2>/dev/null || true
+        "$dispatch_bin" tmux "$dark_val" 2>/dev/null || true
     else
         # Fallback: signal only tmux panes
         local pid comm
@@ -66,9 +71,8 @@ _dispatch() {
 # =============================================================================
 
 _do_toggle() {
-    local current next
-    current=$(get_tmux_option "@powerkit_appearance_forced" "")
-    [[ -z "$current" ]] && current="auto"
+    local current next dark_val dark_style
+    current=$(_macos_mode)
 
     case "$current" in
         auto)  next="dark"  ;;
@@ -77,38 +81,31 @@ _do_toggle() {
         *)     next="auto"  ;;
     esac
 
-    local dark_val
     case "$next" in
         dark)
-            tmux set-option -gq @powerkit_appearance_forced "dark" 2>/dev/null
-            # Change OS appearance first (synchronously), then dispatch so
-            # zac's USR1 handler reads the updated OS state when it syncs.
+            defaults delete -g AppleInterfaceStyleSwitchesAutomatically 2>/dev/null || true
             osascript -e 'tell application "System Events" to tell appearance preferences to set dark mode to true' 2>/dev/null
             dark_val=1
             ;;
         light)
-            tmux set-option -gq @powerkit_appearance_forced "light" 2>/dev/null
+            defaults delete -g AppleInterfaceStyleSwitchesAutomatically 2>/dev/null || true
             osascript -e 'tell application "System Events" to tell appearance preferences to set dark mode to false' 2>/dev/null
             dark_val=0
             ;;
         auto)
-            tmux set-option -gq @powerkit_appearance_forced "" 2>/dev/null
-            # Do not change OS appearance — leave macOS at whatever it is
-            # (Auto/Light/Dark). Read the current resolved state.
-            dark_val=$(_os_dark_value)
+            defaults write -g AppleInterfaceStyleSwitchesAutomatically -bool true 2>/dev/null
+            dark_style=$(defaults read -g AppleInterfaceStyle 2>/dev/null) || dark_style=""
+            [[ "$dark_style" == "Dark" ]] && dark_val=1 || dark_val=0
             ;;
     esac
 
-    # Dispatch AFTER OS change so zac's USR1 handler sees the new appearance
     _dispatch "$dark_val"
 
-    # Invalidate plugin data cache and render cache for immediate visual update
     cache_clear "plugin_appearance_data" 2>/dev/null || true
     cache_clear "plugin_appearance_ttl"  2>/dev/null || true
     [[ -n "${_CACHE_DIR:-}" ]] && rm -f "${_CACHE_DIR}"/rendered_right__* 2>/dev/null || true
 
-    tmux refresh-client -S 2>/dev/null || true
-    tmux run-shell -b "sleep 1 && tmux refresh-client -S" 2>/dev/null || true
+    bash "${POWERKIT_ROOT}/tmux-powerkit.tmux" 2>/dev/null || true
 }
 
 # =============================================================================

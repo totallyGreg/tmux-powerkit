@@ -62,8 +62,11 @@ plugin_check_dependencies() {
 plugin_declare_options() {
   # Icons per mode
   declare_option "icon_auto" "icon" $'\U000F101B' "Icon for auto mode (theme-light-dark)"
+  declare_option "toggle_icon_auto" "icon" "🌗" "Icon for auto mode (theme-light-dark)"
   declare_option "icon_dark" "icon" $'\U000F0594' "Icon for dark mode (moon)"
+  declare_option "toggle_icon_dark" "icon" "🌚" "Icon for dark mode (moon)"
   declare_option "icon_light" "icon" $'\U000F0599' "Icon for light mode (sun)"
+  declare_option "toggle_icon_light" "icon" "🌞" "Icon for light mode (sun)"
 
   # Keybinding
   declare_option "keybinding_toggle" "key" "" "Keybinding to cycle appearance mode"
@@ -88,7 +91,6 @@ _dispatch() {
 
   if [[ -x "$dispatch_bin" ]]; then
     "$dispatch_bin" tmux "$dark_val" 2>/dev/null || true
-    "$dispatch_bin" cache "$dark_val" 2>/dev/null || true
   else
     local pid comm
     while IFS= read -r pid; do
@@ -101,36 +103,31 @@ _dispatch() {
 }
 
 plugin_collect() {
-  local forced dark_val
+  local auto_switch dark_style mode dark_val
 
-  # @powerkit_appearance_forced is set by the toggle helper (dark|light|"" for auto)
-  forced=$(get_tmux_option "@powerkit_appearance_forced" "")
+  auto_switch=$(defaults read -g AppleInterfaceStyleSwitchesAutomatically 2>/dev/null) || auto_switch=""
+  dark_style=$(defaults read -g AppleInterfaceStyle 2>/dev/null) || dark_style=""
 
-  case "$forced" in
-    dark) dark_val=1 ;;
-    light) dark_val=0 ;;
-    *)
-      # Auto mode: read actual OS appearance directly.
-      # defaults(1) returns "Dark" when dark, and exits non-zero (key missing)
-      # when light — both Auto and explicit Light look the same here.
-      local style
-      style=$(defaults read -g AppleInterfaceStyle 2>/dev/null) || style=""
-      [[ "$style" == "Dark" ]] && dark_val=1 || dark_val=0
-      forced=""
+  if [[ "$auto_switch" == "1" ]]; then
+    mode="auto"
+    [[ "$dark_style" == "Dark" ]] && dark_val=1 || dark_val=0
+  elif [[ "$dark_style" == "Dark" ]]; then
+    mode="dark"
+    dark_val=1
+  else
+    mode="light"
+    dark_val=0
+  fi
 
-      # Watcher: OS already changed before we detect it here, so
-      # dispatching after reading is safe — no race condition.
-      local last_dark
-      last_dark=$(get_tmux_option "@dark_appearance" "")
-      if [[ "$dark_val" != "$last_dark" ]]; then
-        _dispatch "$dark_val"
-        [[ -n "${_CACHE_DIR:-}" ]] && rm -f "${_CACHE_DIR}"/rendered_right__* 2>/dev/null || true
-        tmux run-shell -b "sleep 0.5 && tmux refresh-client -S" 2>/dev/null || true
-      fi
-      ;;
-  esac
+  local last_dark
+  last_dark=$(get_tmux_option "@dark_appearance" "")
+  if [[ "$dark_val" != "$last_dark" ]]; then
+    _dispatch "$dark_val"
+    [[ -n "${_CACHE_DIR:-}" ]] && rm -f "${_CACHE_DIR}"/rendered_right__* 2>/dev/null || true
+    tmux run-shell -b "sleep 0.5 && tmux refresh-client -S" 2>/dev/null || true
+  fi
 
-  plugin_data_set "mode" "${forced:-auto}"
+  plugin_data_set "mode" "$mode"
   plugin_data_set "dark" "$dark_val"
 }
 
@@ -164,7 +161,7 @@ plugin_get_health() {
   mode=$(plugin_data_get "mode")
   case "$mode" in
     auto) printf 'ok' ;;
-    *) printf 'info' ;;
+    *) printf 'good' ;;
   esac
 }
 
@@ -183,20 +180,13 @@ plugin_get_context() {
 # =============================================================================
 
 plugin_get_icon() {
-  local mode dark
+  local mode
   mode=$(plugin_data_get "mode")
-  dark=$(plugin_data_get "dark")
 
   case "$mode" in
     dark) get_option "icon_dark" ;;
     light) get_option "icon_light" ;;
-    auto)
-      # Reflect the actual resolved appearance so a recognisable icon is
-      # always shown — moon when dark, sun when light — while the text
-      # ("auto") still communicates that the mode is following the system.
-      [[ "$dark" == "1" ]] && get_option "icon_dark" || get_option "icon_light"
-      ;;
-    *) get_option "icon_dark" ;;
+    *) get_option "icon_auto" ;;
   esac
 }
 
@@ -205,9 +195,15 @@ plugin_get_icon() {
 # =============================================================================
 
 plugin_render() {
-  local dark
-  dark=$(plugin_data_get "dark")
-  [[ "$dark" == "1" ]] && printf 'dark' || printf 'light'
+  # printf '%s' "$(plugin_data_get "mode")"
+  local mode
+  mode=$(plugin_data_get "mode")
+
+  case "$mode" in
+    dark) get_option "toggle_icon_dark" ;;
+    light) get_option "toggle_icon_light" ;;
+    *) get_option "toggle_icon_auto" ;;
+  esac
 }
 
 # =============================================================================
